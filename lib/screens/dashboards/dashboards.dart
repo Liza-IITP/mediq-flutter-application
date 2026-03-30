@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../medical_records_screen.dart';
 import '../doctor_history_screen.dart';
+import '../../widgets/responsive_container.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,7 +10,6 @@ import '../../providers/admin_roster_provider.dart';
 import '../../providers/clinic_settings_provider.dart';
 import '../../providers/clinic_ledger_provider.dart';
 import '../../providers/doctor_queue_provider.dart';
-import '../../providers/doctor_history_provider.dart';
 import '../../providers/patient_stream_provider.dart';
 import '../../providers/patient_booking_provider.dart';
 import '../../providers/medicine_search_provider.dart';
@@ -48,7 +48,7 @@ class PatientDashboard extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        child: ResponsiveContainer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -124,6 +124,7 @@ class PatientDashboard extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
         ),
+        ),   // ResponsiveContainer
       ),
     );
   }
