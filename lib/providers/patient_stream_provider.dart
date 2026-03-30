@@ -10,7 +10,6 @@ final activeAppointmentStream = StreamProvider.autoDispose<List<Map<String, dyna
     return const Stream.empty();
   }
 
-  // 1. Establish the socket mapped precisely mapping the specific boundaries structurally
   final stream = supabase
       .from('appointments')
       .stream(primaryKey: ['id'])
@@ -18,17 +17,20 @@ final activeAppointmentStream = StreamProvider.autoDispose<List<Map<String, dyna
       .order('appointment_date')
       .order('queue_number');
 
-  // 2. Intercept the Socket packet mapping the missing relational IDs sequentially natively
   return stream.asyncMap((appointments) async {
     final List<Map<String, dynamic>> enrichedAppointments = [];
 
     for (var appt in appointments) {
       if (appt['status'] != 'scheduled') continue;
+
       final docId = appt['doctor_id'];
+      final myQueueNum = appt['queue_number'] as int? ?? 0;
+      final apptDate = appt['appointment_date'] as String?;
+      final slot = appt['slot'] as String?;
       String doctorName = 'Unknown Doctor';
 
+      // Resolve doctor name
       if (docId != null) {
-        // We can query the 'users' table natively where ID matches the doctor's bound ID.
         final userResponse = await supabase
             .from('users')
             .select('name')
@@ -36,13 +38,29 @@ final activeAppointmentStream = StreamProvider.autoDispose<List<Map<String, dyna
             .maybeSingle();
 
         if (userResponse != null && userResponse['name'] != null) {
-          doctorName = userResponse['name'];
+          doctorName = userResponse['name'] as String;
         }
       }
 
-      // 3. Clone array forcing custom JSON injections
+      // ETA: count how many 'scheduled' appointments for the same
+      // doctor / date / slot have a queue_number strictly less than mine.
+      int peopleAhead = 0;
+      if (docId != null && apptDate != null && slot != null) {
+        final aheadResponse = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('doctor_id', docId)
+            .eq('appointment_date', apptDate)
+            .eq('slot', slot)
+            .eq('status', 'scheduled')
+            .lt('queue_number', myQueueNum);
+
+        peopleAhead = (aheadResponse as List).length;
+      }
+
       final enrichedAppt = Map<String, dynamic>.from(appt);
       enrichedAppt['doctor_name'] = doctorName;
+      enrichedAppt['people_ahead'] = peopleAhead;
       enrichedAppointments.add(enrichedAppt);
     }
 

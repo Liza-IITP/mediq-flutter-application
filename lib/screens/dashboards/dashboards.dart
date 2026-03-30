@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../medical_records_screen.dart';
+import '../doctor_history_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/admin_roster_provider.dart';
 import '../../providers/clinic_settings_provider.dart';
+import '../../providers/clinic_ledger_provider.dart';
 import '../../providers/doctor_queue_provider.dart';
+import '../../providers/doctor_history_provider.dart';
 import '../../providers/patient_stream_provider.dart';
 import '../../providers/patient_booking_provider.dart';
 import '../../providers/medicine_search_provider.dart';
@@ -131,6 +134,11 @@ class PatientDashboard extends ConsumerWidget {
     final slot = appointment['slot']?.toString().toUpperCase() ?? 'N/A';
     final queueNum = appointment['queue_number']?.toString() ?? '--';
     final apptId = appointment['id'];
+    final peopleAhead = appointment['people_ahead'] as int? ?? 0;
+    final etaMinutes = peopleAhead * 15;
+    final etaText = peopleAhead == 0
+        ? '🎉 You are next!'
+        : 'Estimated Wait: ~$etaMinutes mins';
 
     void handleCancel() async {
       try {
@@ -180,7 +188,28 @@ class PatientDashboard extends ConsumerWidget {
           Text(docName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text('$date • $slot Shift', style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: peopleAhead == 0 ? Colors.green.shade100 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: peopleAhead == 0 ? Colors.green.shade400 : Colors.orange.shade300,
+              ),
+            ),
+            child: Text(
+              etaText,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: peopleAhead == 0 ? Colors.green.shade800 : Colors.orange.shade900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           TextButton.icon(
             onPressed: handleCancel,
             icon: const Icon(Icons.cancel, color: Colors.red),
@@ -392,7 +421,7 @@ class _ClinicDashboardState extends ConsumerState<ClinicDashboard> {
     final rosterState = ref.watch(adminRosterProvider);
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Clinic Admin Dashboard'),
@@ -404,6 +433,7 @@ class _ClinicDashboardState extends ConsumerState<ClinicDashboard> {
               Tab(text: 'Pending Approvals'),
               Tab(text: 'Doctor Roster'),
               Tab(text: 'Clinic Settings'),
+              Tab(text: 'History Ledger'),
             ],
           ),
         ),
@@ -417,6 +447,7 @@ class _ClinicDashboardState extends ConsumerState<ClinicDashboard> {
                 _buildRosterList(pendingDocs, isPending: true),
                 _buildRosterList(approvedDocs, isPending: false),
                 const _ClinicSettingsTab(),
+                const _ClinicLedgerTab(),
               ],
             );
           },
@@ -594,6 +625,108 @@ class _ClinicSettingsTabState extends ConsumerState<_ClinicSettingsTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Clinic History Ledger Tab ─────────────────────────────────────────────────
+
+class _ClinicLedgerTab extends ConsumerWidget {
+  const _ClinicLedgerTab();
+
+  String _formatDate(String? raw) {
+    if (raw == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(raw).toLocal();
+      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ledgerState = ref.watch(clinicLedgerProvider);
+
+    return ledgerState.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('Error: $err', style: const TextStyle(color: Colors.red)),
+      ),
+      data: (appointments) {
+        if (appointments.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                const Text(
+                  'No completed appointments yet.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: appointments.length,
+          itemBuilder: (context, index) {
+            final appt = appointments[index];
+            final patientName = appt['patient_name'] ?? 'Unknown';
+            final doctorName = appt['doctor_name'] ?? 'Unknown';
+            final date = _formatDate(appt['appointment_date'] as String?);
+            final slot = (appt['slot'] as String?)?.toUpperCase() ?? 'N/A';
+            final queueNum = appt['queue_number']?.toString() ?? '--';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                leading: CircleAvatar(
+                  backgroundColor: Colors.teal.shade100,
+                  child: Text('#$queueNum',
+                      style: TextStyle(
+                          color: Colors.teal.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
+                ),
+                title: Text(patientName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text('Dr. $doctorName',
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                    const SizedBox(height: 2),
+                    Text('$date  •  $slot Shift',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                  ],
+                ),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade300),
+                  ),
+                  child: Text('Completed',
+                      style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -845,6 +978,14 @@ class DoctorDashboard extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Doctor Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_edu),
+            tooltip: 'Prescription History',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DoctorHistoryScreen()),
+            ),
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
         ],
       ),
