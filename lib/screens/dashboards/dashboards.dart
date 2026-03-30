@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../medical_records_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -96,6 +97,28 @@ class PatientDashboard extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, st) => Center(child: Text('Error loading queue: $err')),
             ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MedicalRecordsScreen()),
+                );
+              },
+              icon: const Icon(Icons.history_edu_outlined),
+              label: const Text(
+                'My Medical Records',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Colors.blue, width: 1.5),
+                foregroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
