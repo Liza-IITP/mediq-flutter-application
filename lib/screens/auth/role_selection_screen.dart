@@ -45,7 +45,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1.1,
+                  childAspectRatio: 1.0,
                   children: const [
                     _RoleCard(
                       role: UserRole.patient,
@@ -106,23 +106,26 @@ class _RoleCard extends StatelessWidget {
         onTap: () => context.push('/login/${role.toDatabaseString}'),
         borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, size: 36, color: color),
+                child: Icon(icon, size: 32, color: color),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Text(
                 role.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: color),
                 textAlign: TextAlign.center,
