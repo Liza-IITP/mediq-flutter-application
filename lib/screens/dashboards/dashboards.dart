@@ -14,6 +14,8 @@ import '../../providers/patient_stream_provider.dart';
 import '../../providers/patient_booking_provider.dart';
 import '../../providers/medicine_search_provider.dart';
 import '../../providers/pharmacy_inventory_provider.dart';
+import '../../providers/doctor_history_provider.dart';
+import '../../providers/clinics_provider.dart';
 
 class PatientDashboard extends ConsumerWidget {
   const PatientDashboard({super.key});
@@ -413,6 +415,13 @@ class ClinicDashboard extends ConsumerStatefulWidget {
 
 class _ClinicDashboardState extends ConsumerState<ClinicDashboard> {
   void _logout() async {
+    // Invalidate providers to clear cached data for the next user
+    ref.invalidate(adminRosterProvider);
+    ref.invalidate(clinicLedgerProvider);
+    ref.invalidate(doctorQueueProvider);
+    ref.invalidate(doctorHistoryProvider);
+    ref.invalidate(clinicsProvider);
+
     await Supabase.instance.client.auth.signOut();
     if (mounted) context.go('/role-selection');
   }
@@ -1114,18 +1123,19 @@ class DoctorDashboard extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          OverflowBar(
+            alignment: MainAxisAlignment.spaceEvenly,
+            overflowSpacing: 12,
             children: [
               OutlinedButton.icon(
                 onPressed: handleSlidePatient,
                 icon: const Icon(Icons.arrow_downward),
-                label: const Text('Slide Patient'),
+                label: const Text('Slide Patient', style: TextStyle(fontSize: 13)),
               ),
               ElevatedButton.icon(
                 onPressed: handleStartCheckup,
                 icon: const Icon(Icons.medical_services),
-                label: const Text('Start Check-up'),
+                label: const Text('Start Check-up', style: TextStyle(fontSize: 13)),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
               ),
             ],
